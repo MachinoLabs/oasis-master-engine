@@ -103,6 +103,32 @@ function initSpinGame() {
     // Wheel Engine
     var SEGMENT_COUNT = (DNA.wheel && DNA.wheel.segments) ? Number(DNA.wheel.segments) : 8;
     var prizes = (DNA.prizes || []).slice(0, SEGMENT_COUNT);
+
+    // ==========================================
+    // ⚡ LIVE PRIZE FETCHING
+    // ==========================================
+    async function loadLivePrizes() {
+        try {
+            var webAppUrl = "https://script.google.com/macros/s/AKfycbzQA-9G3XPnAjdeik1AM5S5TI8_0MzZdAxMmv3goqfvub2a9opd6HLK6t1o3e6hqLe7/exec";
+            var response = await fetch(webAppUrl + "?niche=" + DNA.niche);
+            var data = await response.json();
+            
+            if (data.status === "success" && data.prizes && data.prizes.length > 0) {
+                prizes = data.prizes.slice(0, SEGMENT_COUNT); 
+                var prizeList = q("#prizeList");
+                if (prizeList) {
+                    prizeList.innerHTML = prizes.map(function(p) { 
+                        return "<li><strong>" + escapeHtml(p.amount) + "</strong> — " + escapeHtml(p.description) + "</li>"; 
+                    }).join("");
+                }
+            }
+        } catch (error) {
+            console.log("Could not load live prizes, using fallback DNA.", error);
+        }
+    }
+    loadLivePrizes(); // Fire fetch command immediately
+    // ==========================================
+
     var wheelCanvas = q("#wheel");
     var wctx = wheelCanvas ? wheelCanvas.getContext("2d") : null;
     var pointerEl = q(".pointer");
@@ -208,7 +234,7 @@ function initSpinGame() {
         openModal(window.winningPrize); 
     });
 
-    // THEME & INFO MODAL LOGIC (Moved permanently from Carrd to Cloudflare)
+    // THEME & INFO MODAL LOGIC
     const themeBtn = q('#themeToggleBtn');
     if (themeBtn) {
         if (localStorage.getItem('spinTheme') === 'dark') {
@@ -254,5 +280,5 @@ function initSpinGame() {
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initSpinGame);
 } else {
-    initSpinGame(); // Fires instantly if the page is already loaded
+    initSpinGame(); 
 }
