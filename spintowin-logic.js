@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (!window.APP_DNA) return console.error("No DNA Found");
     var DNA = window.APP_DNA;
     var q = function(sel) { return document.querySelector(sel); };
-    
+
     function normalizeTel(value){ var raw = String(value || "").trim(); if (!raw) return "#"; if (raw.indexOf("tel:") === 0) return raw; var digits = raw.replace(/[^\d+]/g, ""); return "tel:" + digits; }
     function escapeHtml(s){ var text = String(s || ""); text = text.split("&").join("&amp;"); text = text.split("<").join("&lt;"); text = text.split(">").join("&gt;"); text = text.split('"').join("&quot;"); return text.split("'").join("&#39;"); }
     function initialsFromName(name){ var matches = String(name || "").match(/\b\w/g) || []; return matches.slice(0,2).join("").toUpperCase() || "GO"; }
@@ -11,48 +11,121 @@ document.addEventListener("DOMContentLoaded", function() {
     function getCss(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
     (function applyDNA(){
-        document.documentElement.style.setProperty("--bg1", DNA.branding.bodyRadialStart || "#ffffff");
-        document.documentElement.style.setProperty("--bg2", DNA.branding.bodyRadialEnd || "#f8f1f4");
-        document.documentElement.style.setProperty("--primary", DNA.branding.primaryBackground || "#fefdfb");
-        document.documentElement.style.setProperty("--accent", DNA.branding.accent || "#dedede");
-        document.documentElement.style.setProperty("--accent2", DNA.branding.accentLight || "#f8f1f4");
-        document.title = (DNA.businessName || "Promo") + " — " + (DNA.promotion.type || "Offer");
+        var branding = DNA.branding || {};
+        document.documentElement.style.setProperty("--bg1", branding.bodyRadialStart || "#ffffff");
+        document.documentElement.style.setProperty("--bg2", branding.bodyRadialEnd || "#f8f1f4");
+        document.documentElement.style.setProperty("--primary", branding.primaryBackground || "#fefdfb");
+        document.documentElement.style.setProperty("--accent", branding.accent || "#dedede");
+        document.documentElement.style.setProperty("--accent2", branding.accentLight || "#f8f1f4");
+        document.documentElement.style.setProperty("--text", branding.textColor || "#000000");
+        document.title = (DNA.businessName || "Spin To Win") + " — " + (DNA.promotion && DNA.promotion.type ? DNA.promotion.type : "Promotion");
         q("#logoMark").textContent = initialsFromName(DNA.businessName);
         q("#bizName").textContent = DNA.businessName || "";
         q("#tagline").textContent = DNA.tagline || "";
-        q("#eyebrowText").textContent = DNA.promotion.eyebrow || "Exclusive Offer";
-        q("#promoHeadline").textContent = DNA.promotion.headline || "Spin To Win";
-        q("#promoSubHeadline").textContent = DNA.promotion.subHeadline || "";
-        q("#wheelCenterText").textContent = DNA.wheel.wheelCenterText || "SPIN";
-        q("#limitText").textContent = DNA.terms.limitText || "";
-        q("#spinBtn").textContent = DNA.callToAction.buttonText || "SPIN TO WIN";
-        q("#bizDescription").textContent = DNA.businessProfile.description || "";
-        
-        var chips = [ DNA.businessProfile.credibilityLine1, DNA.businessProfile.credibilityLine2, DNA.businessProfile.servicesHighlight ].filter(Boolean);
-        q("#credRow").innerHTML = chips.map(function(t) { return '<span class="chip">' + escapeHtml(t) + '</span>'; }).join("");
-        
-        var selectedPrizeCount = DNA.wheel.segments || 8;
-        var listPrizes = (DNA.prizes || []).slice(0, selectedPrizeCount);
-        q("#prizeList").innerHTML = listPrizes.map(function(p) { return "<li><strong>" + escapeHtml(p.amount) + "</strong> — " + escapeHtml(p.description) + "</li>"; }).join("");
-        
-        q("#locLine").textContent = [DNA.location.addressLine, DNA.location.city, DNA.location.state].filter(Boolean).join(" • ");
-        q("#footerLine1").textContent = DNA.location.footerLine1 || "";
-        q("#footerLine2").textContent = DNA.location.footerLine2 || "";
-        q("#callBtn").textContent = "CALL NOW";
-        q("#callLink").href = normalizeTel(DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay || "");
-        q("#modalFooter1").textContent = DNA.location.footerLine1 || "";
-        q("#modalFooter2").textContent = DNA.location.footerLine2 || "";
-        q("#modalLimit").textContent = DNA.terms.limitText || "";
-        q("#screenshotNote").style.display = DNA.terms.screenshotReminder ? "" : "none";
+        if(DNA.promotion) {
+            q("#eyebrowText").textContent = DNA.promotion.eyebrow || "Exclusive Offer";
+            q("#promoHeadline").textContent = DNA.promotion.headline || "Spin To Win";
+            q("#promoSubHeadline").textContent = DNA.promotion.subHeadline || "";
+        }
+        if(DNA.wheel) q("#wheelCenterText").textContent = DNA.wheel.wheelCenterText || "SPIN";
+        if(DNA.terms) q("#limitText").textContent = DNA.terms.limitText || "";
+        if(DNA.callToAction) q("#spinBtn").textContent = DNA.callToAction.buttonText || "SPIN TO WIN";
+        if(DNA.businessProfile) q("#bizDescription").textContent = DNA.businessProfile.description || "";
+
+        if (!branding.buttonGlow && q("#spinBtn")) q("#spinBtn").classList.remove("glow");
+        if (!branding.wheelShimmer && q("#wheelShine")) q("#wheelShine").style.display = "none";
+
+        var credRow = q("#credRow");
+        if(credRow && DNA.businessProfile) {
+            var chips = [ DNA.businessProfile.credibilityLine1, DNA.businessProfile.credibilityLine2, DNA.businessProfile.servicesHighlight ].filter(Boolean);
+            credRow.innerHTML = chips.map(function(t) { return '<span class="chip">' + escapeHtml(t) + '</span>'; }).join("");
+        }
+
+        var prizeCard = q("#prizeCard");
+        var prizeList = q("#prizeList");
+        if (DNA.uiLayout && DNA.uiLayout.showPrizeList === false){
+            if(prizeCard) prizeCard.style.display = "none";
+        } else if (prizeList) {
+            var selectedPrizeCount = (DNA.wheel && DNA.wheel.segments) ? DNA.wheel.segments : 8;
+            var listPrizes = (DNA.prizes || []).slice(0, selectedPrizeCount);
+            prizeList.innerHTML = listPrizes.map(function(p) { return "<li><strong>" + escapeHtml(p.amount) + "</strong> — " + escapeHtml(p.description) + "</li>"; }).join("");
+        }
+
+        var loc = DNA.location || {};
+        q("#locLine").textContent = [loc.addressLine, loc.city, loc.state].filter(Boolean).join(" • ");
+        q("#footerLine1").textContent = loc.footerLine1 || "";
+        q("#footerLine2").textContent = loc.footerLine2 || "";
+
+        var callBtn = q("#callBtn");
+        if(callBtn) callBtn.textContent = "CALL NOW";
+        var callLink = q("#callLink");
+        if(callLink) callLink.href = normalizeTel((DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : "");
+
+        q("#modalFooter1").textContent = loc.footerLine1 || "";
+        q("#modalFooter2").textContent = loc.footerLine2 || "";
+        q("#modalLimit").textContent = (DNA.terms && DNA.terms.limitText) ? DNA.terms.limitText : "";
+
+        var screenshotNote = q("#screenshotNote");
+        if(screenshotNote) screenshotNote.style.display = (DNA.terms && DNA.terms.screenshotReminder) ? "" : "none";
+
+        var spinAgainBtn = q("#spinAgainBtn");
+        if(spinAgainBtn && DNA.spinRules && DNA.spinRules.allowSpinAgainButton === false) {
+            spinAgainBtn.style.display = "none";
+        }
     })();
 
-    var prizes = (DNA.prizes || []).slice(0, DNA.wheel.segments || 8);
+    // Confetti Engine RESTORED
+    var confCanvas = q("#confetti");
+    var cctx = confCanvas ? confCanvas.getContext("2d") : null;
+    var confettiParts = []; var confettiActiveUntil = 0; var confettiRunning = false;
+    function resizeConfetti(){
+        if(!confCanvas || !cctx) return;
+        var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        confCanvas.width = Math.floor(window.innerWidth * dpr); confCanvas.height = Math.floor(window.innerHeight * dpr);
+        confCanvas.style.width = window.innerWidth + "px"; confCanvas.style.height = window.innerHeight + "px";
+        cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener("resize", resizeConfetti); resizeConfetti();
+
+    function confettiBurst(multiplier){
+        if(!confCanvas || !cctx || !DNA.confetti || !DNA.confetti.enabled) return;
+        multiplier = multiplier || 1;
+        var colors = DNA.confetti.colors || ["#FFD700", "#FF1493", "#00FFF0", "#FF00FF", "#39FF14", "#FFFFFF"];
+        var count = 400 * Math.max(1, multiplier); var w = window.innerWidth; var h = window.innerHeight;
+        for(var i=0; i !== count; i++){
+            var angle = Math.random() * Math.PI * 2; var velocity = 10 + Math.random() * 30;
+            confettiParts.push({ x: Math.random() * w, y: Math.random() * (h * 0.8), vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity - 10, g: 0.5 + Math.random() * 0.6, w: 8 + Math.random() * 12, h: 6 + Math.random() * 10, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 1.5, color: colors[Math.floor(Math.random() * colors.length)], life: 0, ttl: 120 + Math.random() * 80 });
+        }
+        confettiActiveUntil = performance.now() + (4000 + 500 * multiplier);
+        if (!confettiRunning){ confettiRunning = true; requestAnimationFrame(confettiLoop); }
+    }
+    function confettiLoop(now){
+        if(!cctx) return;
+        cctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        if (confettiParts.length){
+            var next = [];
+            for (var i=0; i !== confettiParts.length; i++){
+                var p = confettiParts[i];
+                p.life++; if (p.life === p.ttl || p.life > p.ttl) continue;
+                p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+                cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot); cctx.fillStyle = p.color; cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); cctx.restore(); next.push(p);
+            }
+            confettiParts = next;
+        }
+        if (confettiActiveUntil > now || confettiParts.length !== 0){ requestAnimationFrame(confettiLoop); } else { confettiRunning = false; cctx.clearRect(0, 0, window.innerWidth, window.innerHeight); }
+    }
+
+    // Wheel Engine
+    var SEGMENT_COUNT = (DNA.wheel && DNA.wheel.segments) ? Number(DNA.wheel.segments) : 8;
+    var prizes = (DNA.prizes || []).slice(0, SEGMENT_COUNT);
     var wheelCanvas = q("#wheel");
-    var wctx = wheelCanvas.getContext("2d");
+    var wctx = wheelCanvas ? wheelCanvas.getContext("2d") : null;
     var pointerEl = q(".pointer");
+
     var rotation = 0; var spinning = false; var lastTickIndex = -1; var pointerAngle = -Math.PI / 2;
 
     function drawWheel(){
+        if(!wheelCanvas || !wctx) return;
         var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
         var cssSize = wheelCanvas.getBoundingClientRect().width || 460;
         var size = Math.round(cssSize * dpr);
@@ -66,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function() {
         wctx.lineWidth = radius * 0.08; wctx.strokeStyle = mix(getCss("--accent2"), getCss("--accent"), 0.35);
         wctx.beginPath(); wctx.arc(cx, cy, radius, 0, Math.PI * 2); wctx.stroke();
         var baseA = mix(getCss("--primary"), getCss("--accent"), 0.18); var baseB = mix("#ffffff", getCss("--accent2"), 0.74);
-        for(var i=0; i < prizes.length; i++){
+        for(var i=0; i !== prizes.length; i++){
             var start = rotation + i * seg; var end = start + seg;
             wctx.beginPath(); wctx.moveTo(cx, cy); wctx.arc(cx, cy, radius * 0.92, start, end); wctx.closePath();
             var grad = wctx.createLinearGradient(cx, cy - radius, cx, cy + radius);
@@ -88,46 +161,92 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
     function easeOutBack(t){ var c1 = 1.70158; return 1 + (c1 + 1) * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
-    function pickIndexWeighted(){ var total = prizes.reduce(function(a,b){return a + (b.weight||1);},0); var r = Math.random() * total; for(var i=0; i<prizes.length; i++){ r -= (prizes[i].weight||1); if(r<=0) return i; } return prizes.length-1; }
+    function pickIndexWeighted(){ var total = prizes.reduce(function(a,b){return a + Math.max(0.1, Number(b.weight||1));},0); var r = Math.random() * total; for(var i=0; i<prizes.length; i++){ r -= Math.max(0.1, Number(prizes[i].weight||1)); if(r<=0) return i; } return prizes.length-1; }
 
     function spin(){
         if (spinning) return;
-        spinning = true; q("#spinBtn").disabled = true;
+        spinning = true; var spinBtn = q("#spinBtn"); if(spinBtn) spinBtn.disabled = true; lastTickIndex = -1;
         var winnerIndex = pickIndexWeighted(); var seg = (Math.PI * 2) / prizes.length; var targetMod = pointerAngle - ((winnerIndex + 0.5) * seg);
-        var fullTurns = 6 + Math.floor(Math.random() * 2); var duration = 5500;
+        var fullTurns = (DNA.wheel && DNA.wheel.spinRotations ? Number(DNA.wheel.spinRotations) : 6) + Math.floor(Math.random() * 2);
+        var duration = Math.max(3200, (DNA.wheel && DNA.wheel.spinDuration ? Number(DNA.wheel.spinDuration) : 5.5) * 1000);
         var startRot = rotation; var baseEnd = (fullTurns * Math.PI * 2) + targetMod;
-        var overshootEnd = baseEnd + (seg * 0.11);
+        var overshootEnabled = (DNA.wheel && DNA.wheel.finalOvershoot !== undefined) ? !!DNA.wheel.finalOvershoot : true;
+        var overshootEnd = baseEnd + (overshootEnabled ? (seg * 0.11) : 0);
         var startTime = performance.now(); var gateDropped = false; 
 
         function frame(now){
             var t = Math.min(1, (now - startTime) / duration);
-            if (t < 0.88) { rotation = startRot + (overshootEnd - startRot) * easeOutCubic(t / 0.88); } 
-            else { rotation = overshootEnd + (baseEnd - overshootEnd) * easeOutBack(Math.min(1, (t - 0.88) / 0.12)); }
-            
-            var normalized = ((pointerAngle - rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-            var currentIndex = Math.floor(normalized / seg);
-            if (currentIndex !== lastTickIndex){ lastTickIndex = currentIndex; pointerEl.classList.remove("tick"); void pointerEl.offsetWidth; pointerEl.classList.add("tick"); }
+            if (overshootEnabled){ 
+                if (t < 0.88){ rotation = startRot + (overshootEnd - startRot) * easeOutCubic(t / 0.88); } 
+                else { rotation = overshootEnd + (baseEnd - overshootEnd) * easeOutBack(Math.min(1, (t - 0.88) / 0.12)); } 
+            } else { rotation = startRot + (baseEnd - startRot) * easeOutCubic(t); }
+
+            if (DNA.wheel && DNA.wheel.pointerTick && pointerEl){
+                var normalized = ((pointerAngle - rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+                var currentIndex = Math.floor(normalized / seg);
+                if (currentIndex !== lastTickIndex){ lastTickIndex = currentIndex; pointerEl.classList.remove("tick"); void pointerEl.offsetWidth; pointerEl.classList.add("tick"); }
+            }
 
             if (t > 0.75 && !gateDropped) {
                 gateDropped = true; window.winningPrize = prizes[winnerIndex];
                 if(typeof MachinoEngine !== 'undefined') { MachinoEngine.triggerLuckGame("Spin-To-Win", window.winningPrize.description, DNA.niche); } 
+                else { console.error("MachinoEngine script not found!"); }
             }
+            
             if (t < 1){ requestAnimationFrame(frame); return; }
             rotation = ((baseEnd % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
-            spinning = false; q("#spinBtn").disabled = false;
+            spinning = false; if(spinBtn) spinBtn.disabled = false;
         }
         requestAnimationFrame(frame);
     }
 
-    q("#spinBtn").addEventListener("click", spin);
-    q(".wheelShell").addEventListener("click", spin);
+    var spinBtn = q("#spinBtn"); if(spinBtn) spinBtn.addEventListener("click", spin);
+    var wheelShell = q(".wheelShell"); if(wheelShell) wheelShell.addEventListener("click", spin);
 
     var modal = q("#modal");
     function openModal(prize){
-        q("#winAmount").textContent = prize.amount; q("#winDesc").textContent = prize.description; q("#winCode").textContent = prize.code;
-        q("#claimLine").textContent = "Mention code " + prize.code + " when booking!";
-        modal.classList.add("show");
+        if(q("#winAmount")) q("#winAmount").textContent = prize.amount || "PRIZE"; 
+        if(q("#winDesc")) q("#winDesc").textContent = prize.description || ""; 
+        if(q("#winCode")) q("#winCode").textContent = prize.code || "CODE";
+        
+        if(q("#claimLine")) {
+            var claimTpl = (DNA.callToAction && DNA.callToAction.claimLine) ? DNA.callToAction.claimLine : "Mention code {CODE} when booking!";
+            q("#claimLine").textContent = claimTpl.replace("{CODE}", prize.code || "CODE");
+        }
+        
+        // Trigger Confetti
+        if(DNA.confetti && DNA.confetti.burstOnWin) {
+            confettiBurst(prize.bigWin ? Number(DNA.confetti.bigWinMultiplier || 3) : 1);
+        }
+
+        if(modal) modal.classList.add("show");
     }
-    q("#closeModal").addEventListener("click", function(){ modal.classList.remove("show"); });
-    window.addEventListener('machinoLeadCaptured', function() { openModal(window.winningPrize); });
+    
+    var closeModalBtn = q("#closeModal"); if(closeModalBtn) closeModalBtn.addEventListener("click", function(){ if(modal) modal.classList.remove("show"); });
+    if(modal) modal.addEventListener("click", function(e) { if (e.target === modal) modal.classList.remove("show"); });
+    
+    var copyBtn = q("#copyBtn"); 
+    if(copyBtn) {
+        copyBtn.addEventListener("click", function() {
+            var code = q("#winCode") ? q("#winCode").textContent.trim() : "";
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(function() {
+                    copyBtn.textContent = "COPIED"; setTimeout(function() { copyBtn.textContent = "COPY"; }, 900);
+                }).catch(fallbackCopy);
+            } else { fallbackCopy(); }
+            function fallbackCopy(){
+                var ta = document.createElement("textarea"); ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+                copyBtn.textContent = "COPIED"; setTimeout(function() { copyBtn.textContent = "COPY"; }, 900);
+            }
+        });
+    }
+
+    // THE HANDOFF: Force close the Lead Capture modal, open the Final Prize modal.
+    window.addEventListener('machinoLeadCaptured', function() { 
+        var engineOverlay = q('.machino-overlay');
+        if (engineOverlay) {
+            engineOverlay.style.display = 'none';
+        }
+        openModal(window.winningPrize); 
+    });
 });
