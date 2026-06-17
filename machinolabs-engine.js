@@ -1,5 +1,5 @@
 /**
- * 🚀 MACHINOLABS UNIVERSAL LEAD ENGINE (DUMB PIPE EDITION) 🚀
+ * 🚀 MACHINOLABS UNIVERSAL LEAD ENGINE (PHANTOM SYNC EDITION) 🚀
  * This script is 100% client agnostic. It dynamically accepts the niche
  * routing instructions directly from the game's DNA.
  */
@@ -10,10 +10,7 @@ const MachinoEngine = (function() {
     // 1. MASTER CONFIGURATION
     // ==========================================
     const CONFIG = {
-        // PASTE YOUR NEWLY DEPLOYED GOOGLE APPS SCRIPT URL HERE
         webhookUrl: "https://script.google.com/macros/s/AKfycbzQA-9G3XPnAjdeik1AM5S5TI8_0MzZdAxMmv3goqfvub2a9opd6HLK6t1o3e6hqLe7/exec",
-        
-        // Only used for Skill Games (like Smak-a-dot)
         skillLevels: {
             "KIDS": [
                 { minScore: 0,  maxScore: 19, prizeName: "Free Kids Drink" },
@@ -27,11 +24,7 @@ const MachinoEngine = (function() {
         }
     };
 
-    // State Variables
-    let currentPrize = "";
-    let currentScore = "N/A";
-    let currentSource = "Unknown Game";
-    let currentNiche = "Unknown"; // Dynamically catches the client ID
+    let currentPrize = ""; let currentScore = "N/A"; let currentSource = "Unknown Game"; let currentNiche = "Unknown";
 
     // ==========================================
     // 2. AUTO-BUILD THE UI (Runs instantly)
@@ -39,15 +32,21 @@ const MachinoEngine = (function() {
     function injectUI() {
         const style = document.createElement('style');
         style.innerHTML = `
-            .machino-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 9000; font-family: system-ui, -apple-system, sans-serif; }
+            .machino-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 9000; font-family: system-ui, -apple-system, sans-serif; }
             .machino-overlay.show { display: flex; animation: machinoFadeIn 0.3s ease-out; }
-            .machino-modal { width: 100%; max-width: 360px; background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(0,0,0,0.08); border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.14); padding: 26px 22px; text-align: center; }
+            .machino-modal { width: 100%; max-width: 360px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.14); padding: 26px 22px; text-align: center; }
+            .dark-theme .machino-modal { background: #1a1a1a; border-color: rgba(255,255,255,0.1); }
             .machino-modal h3 { color: #222; font-size: 26px; font-weight: 900; margin: 0 0 8px; letter-spacing: -0.3px; }
+            .dark-theme .machino-modal h3 { color: #fff; }
             .machino-modal p { color: #555; font-size: 14.5px; line-height: 1.45; margin-bottom: 16px; }
+            .dark-theme .machino-modal p { color: #aaa; }
             .machino-highlight { color: #000; font-weight: 900; font-size: 18px; display: block; margin: 12px 0 16px; padding: 12px; background: #f8f1f4; border-radius: 14px; border: 1px dashed rgba(0,0,0,0.1); }
+            .dark-theme .machino-highlight { background: #2a2528; color: #fff; border-color: rgba(255,255,255,0.2); }
             .machino-modal input { width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0, 0.12); border-radius: 14px; padding: 14px; font-size: 16px; margin-bottom: 10px; outline: none; background: #fff; color: #000; transition: border-color 0.2s ease; }
+            .dark-theme .machino-modal input { background: #222; color: #fff; border-color: rgba(255,255,255,0.1); }
             .machino-modal input:focus { border-color: #555; }
             .machino-btn { width: 100%; border: none; cursor: pointer; background: linear-gradient(180deg, #ffffff, #f8f1f4); color: #222; padding: 16px; border-radius: 16px; font-weight: 900; font-size: 15px; box-shadow: 0 12px 24px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06); text-transform: uppercase; margin-top: 6px; transition: transform 0.1s ease; }
+            .dark-theme .machino-btn { background: linear-gradient(180deg, #333, #222); color: #fff; border-color: rgba(255,255,255,0.1); }
             .machino-btn:active { transform: translateY(1px) scale(0.98); }
             .machino-btn:disabled { opacity: 0.6; cursor: not-allowed; }
             .machino-status { min-height: 18px; color: #666; font-size: 13px; margin-top: 12px; font-weight: 600; }
@@ -81,7 +80,6 @@ const MachinoEngine = (function() {
             if (x.length === 0) { e.target.value = ''; return; }
             if (x.charAt(0) !== '1') { x = '1' + x; } 
             x = x.substring(0, 11); 
-            
             let formatted = "+1 ";
             if (x.length > 1) { formatted += "(" + x.substring(1, 4); }
             if (x.length >= 5) { formatted += ") " + x.substring(4, 7); }
@@ -98,85 +96,88 @@ const MachinoEngine = (function() {
         const btn = document.getElementById('machino-unlock-btn');
         const statusText = document.getElementById('machino-status');
         
-        btn.disabled = true; 
-        btn.innerText = "SECURING..."; 
-        statusText.innerText = "Connecting to database...";
+        btn.disabled = true; btn.innerText = "SECURING..."; statusText.innerText = "Connecting to database...";
 
         const payload = {
             name: document.getElementById('machino-name').value,
             email: document.getElementById('machino-email').value,
             phone: document.getElementById('machino-phone').value || "N/A",
-            source: currentSource,
-            score: currentScore,
-            niche: currentNiche, // DYNAMIC ROUTING ACTIVATED
-            prize: currentPrize
+            source: currentSource, score: currentScore, niche: currentNiche, prize: currentPrize
         };
 
         try {
-            await fetch(CONFIG.webhookUrl, {
-                method: 'POST', 
-                mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            });
-            
+            await fetch(CONFIG.webhookUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
             statusText.innerText = "Success! Redirecting...";
             setTimeout(() => {
                 document.getElementById('machino-overlay').classList.remove('show');
                 window.dispatchEvent(new CustomEvent('machinoLeadCaptured', { detail: payload }));
             }, 800);
-            
         } catch (error) {
             console.error("Machino Engine Transmission Error:", error);
             statusText.innerText = "Connection blocked. Please try again.";
-            btn.disabled = false;
-            btn.innerText = "CLAIM MY PRIZE";
+            btn.disabled = false; btn.innerText = "CLAIM MY PRIZE";
         }
     }
 
     window.addEventListener('DOMContentLoaded', injectUI);
 
     // ==========================================
-    // 4. THE PUBLIC API
+    // 4. PHANTOM SYNC 2.0 (The Ghost Updater)
+    // ==========================================
+    const LOCAL_VERSION = "v1"; // Matches your version.txt
+    
+    async function checkPhantomSync() {
+        try {
+            // Append a timestamp to the URL so the browser doesn't pull a cached version.txt
+            const response = await fetch("https://oasis-master-engine.pages.dev/version.txt?t=" + Date.now());
+            const liveVersion = (await response.text()).trim();
+            
+            if (liveVersion && liveVersion !== LOCAL_VERSION) {
+                console.log("⚡ Phantom Sync: New version detected (" + liveVersion + "). Waiting in shadows...");
+                
+                if (document.visibilityState === 'hidden') {
+                    window.location.reload(true);
+                } else {
+                    document.addEventListener('visibilitychange', function() {
+                        if (document.visibilityState === 'hidden') {
+                            console.log("⚡ Phantom Sync: Target lost focus. Executing reload.");
+                            window.location.reload(true);
+                        }
+                    });
+                }
+            }
+        } catch (e) { /* Fail silently if offline */ }
+    }
+    
+    // Check for updates 2.5 seconds after load so it doesn't slow down the wheel graphic
+    setTimeout(checkPhantomSync, 2500);
+
+    // ==========================================
+    // 5. THE PUBLIC API
     // ==========================================
     return {
-        // Now accepts clientNiche as the 3rd parameter
         triggerLuckGame: function(gameName, prizeWon, clientNiche) {
-            currentSource = gameName;
-            currentPrize = prizeWon;
-            currentScore = "N/A"; 
-            currentNiche = clientNiche || "Unknown"; // Catch the DNA
-            
+            currentSource = gameName; currentPrize = prizeWon; currentScore = "N/A"; currentNiche = clientNiche || "Unknown"; 
             document.getElementById('machino-headline').innerText = "YOU WON!";
             document.getElementById('machino-subtext').innerText = "Enter your info to secure your prize.";
             document.getElementById('machino-prize-display').innerText = prizeWon;
             document.getElementById('machino-overlay').classList.add('show');
         },
-
-        // Now accepts clientNiche as the 4th parameter
         triggerSkillGame: function(gameName, finalScore, currentLevel, clientNiche) {
-            currentSource = gameName;
-            currentScore = finalScore;
-            currentNiche = clientNiche || "Unknown"; // Catch the DNA
-            
-            let unlockedPrize = "Thanks for playing!"; 
-            let prizeBucket = CONFIG.skillLevels[currentLevel];
-            
+            currentSource = gameName; currentScore = finalScore; currentNiche = clientNiche || "Unknown"; 
+            let unlockedPrize = "Thanks for playing!"; let prizeBucket = CONFIG.skillLevels[currentLevel];
             if (prizeBucket) {
                 for (let i = 0; i < prizeBucket.length; i++) {
                     if (finalScore >= prizeBucket[i].minScore && finalScore <= prizeBucket[i].maxScore) {
-                        unlockedPrize = prizeBucket[i].prizeName;
-                        break;
+                        unlockedPrize = prizeBucket[i].prizeName; break;
                     }
                 }
             }
             currentPrize = unlockedPrize;
-
             document.getElementById('machino-headline').innerText = "GAME OVER";
             document.getElementById('machino-subtext').innerText = `You scored ${finalScore} points!`;
             document.getElementById('machino-prize-display').innerText = `Unlocked: ${currentPrize}`;
             document.getElementById('machino-overlay').classList.add('show');
         }
     };
-
 })();
