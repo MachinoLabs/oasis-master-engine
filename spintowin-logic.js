@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function() {
+function initSpinGame() {
     if (!window.APP_DNA) return console.error("No DNA Found");
     var DNA = window.APP_DNA;
     var q = function(sel) { return document.querySelector(sel); };
@@ -19,21 +19,18 @@ document.addEventListener("DOMContentLoaded", function() {
         document.documentElement.style.setProperty("--accent2", branding.accentLight || "#f8f1f4");
         document.documentElement.style.setProperty("--text", branding.textColor || "#000000");
         document.title = (DNA.businessName || "Spin To Win") + " — " + (DNA.promotion && DNA.promotion.type ? DNA.promotion.type : "Promotion");
-        q("#logoMark").textContent = initialsFromName(DNA.businessName);
-        q("#bizName").textContent = DNA.businessName || "";
-        q("#tagline").textContent = DNA.tagline || "";
+        if(q("#logoMark")) q("#logoMark").textContent = initialsFromName(DNA.businessName);
+        if(q("#bizName")) q("#bizName").textContent = DNA.businessName || "";
+        if(q("#tagline")) q("#tagline").textContent = DNA.tagline || "";
         if(DNA.promotion) {
-            q("#eyebrowText").textContent = DNA.promotion.eyebrow || "Exclusive Offer";
-            q("#promoHeadline").textContent = DNA.promotion.headline || "Spin To Win";
-            q("#promoSubHeadline").textContent = DNA.promotion.subHeadline || "";
+            if(q("#eyebrowText")) q("#eyebrowText").textContent = DNA.promotion.eyebrow || "Exclusive Offer";
+            if(q("#promoHeadline")) q("#promoHeadline").textContent = DNA.promotion.headline || "Spin To Win";
+            if(q("#promoSubHeadline")) q("#promoSubHeadline").textContent = DNA.promotion.subHeadline || "";
         }
-        if(DNA.wheel) q("#wheelCenterText").textContent = DNA.wheel.wheelCenterText || "SPIN";
-        if(DNA.terms) q("#limitText").textContent = DNA.terms.limitText || "";
-        if(DNA.callToAction) q("#spinBtn").textContent = DNA.callToAction.buttonText || "SPIN TO WIN";
-        if(DNA.businessProfile) q("#bizDescription").textContent = DNA.businessProfile.description || "";
-
-        if (!branding.buttonGlow && q("#spinBtn")) q("#spinBtn").classList.remove("glow");
-        if (!branding.wheelShimmer && q("#wheelShine")) q("#wheelShine").style.display = "none";
+        if(DNA.wheel && q("#wheelCenterText")) q("#wheelCenterText").textContent = DNA.wheel.wheelCenterText || "SPIN";
+        if(DNA.terms && q("#limitText")) q("#limitText").textContent = DNA.terms.limitText || "";
+        if(DNA.callToAction && q("#spinBtn")) q("#spinBtn").textContent = DNA.callToAction.buttonText || "SPIN TO WIN";
+        if(DNA.businessProfile && q("#bizDescription")) q("#bizDescription").textContent = DNA.businessProfile.description || "";
 
         var credRow = q("#credRow");
         if(credRow && DNA.businessProfile) {
@@ -41,40 +38,28 @@ document.addEventListener("DOMContentLoaded", function() {
             credRow.innerHTML = chips.map(function(t) { return '<span class="chip">' + escapeHtml(t) + '</span>'; }).join("");
         }
 
-        var prizeCard = q("#prizeCard");
         var prizeList = q("#prizeList");
-        if (DNA.uiLayout && DNA.uiLayout.showPrizeList === false){
-            if(prizeCard) prizeCard.style.display = "none";
-        } else if (prizeList) {
+        if (prizeList) {
             var selectedPrizeCount = (DNA.wheel && DNA.wheel.segments) ? DNA.wheel.segments : 8;
             var listPrizes = (DNA.prizes || []).slice(0, selectedPrizeCount);
             prizeList.innerHTML = listPrizes.map(function(p) { return "<li><strong>" + escapeHtml(p.amount) + "</strong> — " + escapeHtml(p.description) + "</li>"; }).join("");
         }
 
         var loc = DNA.location || {};
-        q("#locLine").textContent = [loc.addressLine, loc.city, loc.state].filter(Boolean).join(" • ");
-        q("#footerLine1").textContent = loc.footerLine1 || "";
-        q("#footerLine2").textContent = loc.footerLine2 || "";
+        if(q("#locLine")) q("#locLine").textContent = [loc.addressLine, loc.city, loc.state].filter(Boolean).join(" • ");
+        if(q("#footerLine1")) q("#footerLine1").textContent = loc.footerLine1 || "";
+        if(q("#footerLine2")) q("#footerLine2").textContent = loc.footerLine2 || "";
 
-        var callBtn = q("#callBtn");
-        if(callBtn) callBtn.textContent = "CALL NOW";
-        var callLink = q("#callLink");
-        if(callLink) callLink.href = normalizeTel((DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : "");
+        if(q("#callBtn")) q("#callBtn").textContent = "CALL NOW";
+        if(q("#callLink")) q("#callLink").href = normalizeTel((DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : "");
 
-        q("#modalFooter1").textContent = loc.footerLine1 || "";
-        q("#modalFooter2").textContent = loc.footerLine2 || "";
-        q("#modalLimit").textContent = (DNA.terms && DNA.terms.limitText) ? DNA.terms.limitText : "";
-
-        var screenshotNote = q("#screenshotNote");
-        if(screenshotNote) screenshotNote.style.display = (DNA.terms && DNA.terms.screenshotReminder) ? "" : "none";
-
-        var spinAgainBtn = q("#spinAgainBtn");
-        if(spinAgainBtn && DNA.spinRules && DNA.spinRules.allowSpinAgainButton === false) {
-            spinAgainBtn.style.display = "none";
-        }
+        if(q("#modalFooter1")) q("#modalFooter1").textContent = loc.footerLine1 || "";
+        if(q("#modalFooter2")) q("#modalFooter2").textContent = loc.footerLine2 || "";
+        if(q("#modalLimit")) q("#modalLimit").textContent = (DNA.terms && DNA.terms.limitText) ? DNA.terms.limitText : "";
+        if(q("#screenshotNote")) q("#screenshotNote").style.display = (DNA.terms && DNA.terms.screenshotReminder) ? "" : "none";
     })();
 
-    // Confetti Engine RESTORED
+    // Confetti Engine
     var confCanvas = q("#confetti");
     var cctx = confCanvas ? confCanvas.getContext("2d") : null;
     var confettiParts = []; var confettiActiveUntil = 0; var confettiRunning = false;
@@ -192,7 +177,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 if(typeof MachinoEngine !== 'undefined') { MachinoEngine.triggerLuckGame("Spin-To-Win", window.winningPrize.description, DNA.niche); } 
                 else { console.error("MachinoEngine script not found!"); }
             }
-            
             if (t < 1){ requestAnimationFrame(frame); return; }
             rotation = ((baseEnd % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
             spinning = false; if(spinBtn) spinBtn.disabled = false;
@@ -200,53 +184,75 @@ document.addEventListener("DOMContentLoaded", function() {
         requestAnimationFrame(frame);
     }
 
-    var spinBtn = q("#spinBtn"); if(spinBtn) spinBtn.addEventListener("click", spin);
-    var wheelShell = q(".wheelShell"); if(wheelShell) wheelShell.addEventListener("click", spin);
+    if(q("#spinBtn")) q("#spinBtn").addEventListener("click", spin);
+    if(q(".wheelShell")) q(".wheelShell").addEventListener("click", spin);
 
     var modal = q("#modal");
     function openModal(prize){
         if(q("#winAmount")) q("#winAmount").textContent = prize.amount || "PRIZE"; 
         if(q("#winDesc")) q("#winDesc").textContent = prize.description || ""; 
         if(q("#winCode")) q("#winCode").textContent = prize.code || "CODE";
-        
         if(q("#claimLine")) {
             var claimTpl = (DNA.callToAction && DNA.callToAction.claimLine) ? DNA.callToAction.claimLine : "Mention code {CODE} when booking!";
             q("#claimLine").textContent = claimTpl.replace("{CODE}", prize.code || "CODE");
         }
-        
-        // Trigger Confetti
-        if(DNA.confetti && DNA.confetti.burstOnWin) {
-            confettiBurst(prize.bigWin ? Number(DNA.confetti.bigWinMultiplier || 3) : 1);
-        }
-
+        if(DNA.confetti && DNA.confetti.burstOnWin) { confettiBurst(prize.bigWin ? Number(DNA.confetti.bigWinMultiplier || 3) : 1); }
         if(modal) modal.classList.add("show");
     }
     
-    var closeModalBtn = q("#closeModal"); if(closeModalBtn) closeModalBtn.addEventListener("click", function(){ if(modal) modal.classList.remove("show"); });
+    if(q("#closeModal")) q("#closeModal").addEventListener("click", function(){ if(modal) modal.classList.remove("show"); });
     if(modal) modal.addEventListener("click", function(e) { if (e.target === modal) modal.classList.remove("show"); });
-    
-    var copyBtn = q("#copyBtn"); 
-    if(copyBtn) {
-        copyBtn.addEventListener("click", function() {
-            var code = q("#winCode") ? q("#winCode").textContent.trim() : "";
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(code).then(function() {
-                    copyBtn.textContent = "COPIED"; setTimeout(function() { copyBtn.textContent = "COPY"; }, 900);
-                }).catch(fallbackCopy);
-            } else { fallbackCopy(); }
-            function fallbackCopy(){
-                var ta = document.createElement("textarea"); ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-                copyBtn.textContent = "COPIED"; setTimeout(function() { copyBtn.textContent = "COPY"; }, 900);
+    window.addEventListener('machinoLeadCaptured', function() { 
+        var engineOverlay = q('.machino-overlay');
+        if (engineOverlay) engineOverlay.style.display = 'none';
+        openModal(window.winningPrize); 
+    });
+
+    // THEME & INFO MODAL LOGIC (Moved permanently from Carrd to Cloudflare)
+    const themeBtn = q('#themeToggleBtn');
+    if (themeBtn) {
+        if (localStorage.getItem('spinTheme') === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeBtn.textContent = '☀️';
+        }
+        themeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            if (document.body.classList.contains('dark-theme')) {
+                localStorage.setItem('spinTheme', 'dark');
+                themeBtn.textContent = '☀️';
+            } else {
+                localStorage.setItem('spinTheme', 'light');
+                themeBtn.textContent = '🌙';
             }
         });
     }
 
-    // THE HANDOFF: Force close the Lead Capture modal, open the Final Prize modal.
-    window.addEventListener('machinoLeadCaptured', function() { 
-        var engineOverlay = q('.machino-overlay');
-        if (engineOverlay) {
-            engineOverlay.style.display = 'none';
+    const infoBtn = q("#infoBtn");
+    const infoOverlay = q("#infoOverlay");
+    const infoModal = q("#infoModal");
+    const infoCloseBtn = q("#infoCloseBtn");
+    const tabButtons = Array.from(document.querySelectorAll(".ml-info-tab"));
+    const panels = Array.from(document.querySelectorAll(".ml-info-panel"));
+
+    if (infoBtn && infoOverlay && infoModal) {
+        function openInfo() { infoOverlay.hidden = false; infoModal.hidden = false; }
+        function closeInfo() { infoOverlay.hidden = true; infoModal.hidden = true; }
+        function setActiveTab(tabName) {
+            tabButtons.forEach(btn => btn.classList.toggle("ml-info-tab-active", btn.dataset.tab === tabName));
+            panels.forEach(panel => panel.hidden = (panel.dataset.panel !== tabName));
         }
-        openModal(window.winningPrize); 
-    });
-});
+        infoBtn.addEventListener("click", () => infoModal.hidden ? openInfo() : closeInfo());
+        infoOverlay.addEventListener("click", closeInfo);
+        infoCloseBtn.addEventListener("click", closeInfo);
+        tabButtons.forEach(btn => btn.addEventListener("click", () => setActiveTab(btn.dataset.tab)));
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !infoModal.hidden) closeInfo(); });
+        setActiveTab("about");
+    }
+}
+
+// THE BULLETPROOF LAUNCHER
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSpinGame);
+} else {
+    initSpinGame(); // Fires instantly if the page is already loaded
+}
