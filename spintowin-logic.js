@@ -19,14 +19,17 @@ function initSpinGame() {
         document.documentElement.style.setProperty("--accent2", branding.accentLight || "#f8f1f4");
         document.documentElement.style.setProperty("--text", branding.textColor || "#000000");
         document.title = (DNA.businessName || "Spin To Win") + " — " + (DNA.promotion && DNA.promotion.type ? DNA.promotion.type : "Promotion");
+        
         if(q("#logoMark")) q("#logoMark").textContent = initialsFromName(DNA.businessName);
         if(q("#bizName")) q("#bizName").textContent = DNA.businessName || "";
         if(q("#tagline")) q("#tagline").textContent = DNA.tagline || "";
+        
         if(DNA.promotion) {
             if(q("#eyebrowText")) q("#eyebrowText").textContent = DNA.promotion.eyebrow || "Exclusive Offer";
             if(q("#promoHeadline")) q("#promoHeadline").textContent = DNA.promotion.headline || "Spin To Win";
             if(q("#promoSubHeadline")) q("#promoSubHeadline").textContent = DNA.promotion.subHeadline || "";
         }
+        
         if(DNA.wheel && q("#wheelCenterText")) q("#wheelCenterText").textContent = DNA.wheel.wheelCenterText || "SPIN";
         if(DNA.terms && q("#limitText")) q("#limitText").textContent = DNA.terms.limitText || "";
         if(DNA.callToAction && q("#spinBtn")) q("#spinBtn").textContent = DNA.callToAction.buttonText || "SPIN TO WIN";
@@ -50,19 +53,78 @@ function initSpinGame() {
         if(q("#footerLine1")) q("#footerLine1").textContent = loc.footerLine1 || "";
         if(q("#footerLine2")) q("#footerLine2").textContent = loc.footerLine2 || "";
 
+        // Safely wire up the Call Now button with a fallback phone number
+        var defaultPhone = "7176232907";
+        var telNum = (DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : defaultPhone;
+        
         if(q("#callBtn")) q("#callBtn").textContent = "CALL NOW";
-        if(q("#callLink")) q("#callLink").href = normalizeTel((DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : "");
+        if(q("#callLink")) q("#callLink").href = normalizeTel(telNum);
 
         if(q("#modalFooter1")) q("#modalFooter1").textContent = loc.footerLine1 || "";
         if(q("#modalFooter2")) q("#modalFooter2").textContent = loc.footerLine2 || "";
         if(q("#modalLimit")) q("#modalLimit").textContent = (DNA.terms && DNA.terms.limitText) ? DNA.terms.limitText : "";
-        if(q("#screenshotNote")) q("#screenshotNote").style.display = (DNA.terms && DNA.terms.screenshotReminder) ? "" : "none";
     })();
 
-    // Confetti Engine
+    // ==========================================
+    // 🔒 DEVICE LOCKING & SECRET RESET
+    // ==========================================
+    var LOCK_MODE = (DNA.spinRules && DNA.spinRules.limitMode) ? DNA.spinRules.limitMode : "perDevice";
+    var STORAGE_KEY = "spinToWinLock_v2";
+
+    function isLocked(){
+        if (LOCK_MODE === "none") return false;
+        try{
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            var obj = JSON.parse(raw);
+            if (LOCK_MODE === "perDevice") return !!obj.locked;
+            if (LOCK_MODE === "perDay"){
+                var d = new Date();
+                return obj.dayKey === (d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate());
+            }
+        } catch(e){}
+        return false;
+    }
+
+    function setLocked(){
+        if (LOCK_MODE === "none") return;
+        try{
+            if (LOCK_MODE === "perDevice"){
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ locked:true, ts:Date.now() }));
+            } else if (LOCK_MODE === "perDay"){
+                var d = new Date();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ dayKey: (d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate()), ts:Date.now() }));
+            }
+        } catch(e){}
+    }
+
+    function clearLocked(){
+        try{ localStorage.removeItem(STORAGE_KEY); } catch(e){}
+    }
+
+    // Bind secret Admin Reset to the "Tap the wheel to reveal..." text
+    if(q("#helperLine")) {
+        q("#helperLine").addEventListener("dblclick", function() {
+            clearLocked();
+            window.location.reload();
+        });
+    }
+
+    // Fallback if the hidden reset button is used
+    if(q("#resetBtn")) {
+        q("#resetBtn").addEventListener("click", function() {
+            clearLocked();
+            if(q("#modal")) q("#modal").classList.remove("show");
+        });
+    }
+
+    // ==========================================
+    // 🎉 CONFETTI ENGINE
+    // ==========================================
     var confCanvas = q("#confetti");
     var cctx = confCanvas ? confCanvas.getContext("2d") : null;
     var confettiParts = []; var confettiActiveUntil = 0; var confettiRunning = false;
+    
     function resizeConfetti(){
         if(!confCanvas || !cctx) return;
         var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -84,6 +146,7 @@ function initSpinGame() {
         confettiActiveUntil = performance.now() + (4000 + 500 * multiplier);
         if (!confettiRunning){ confettiRunning = true; requestAnimationFrame(confettiLoop); }
     }
+    
     function confettiLoop(now){
         if(!cctx) return;
         cctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -100,13 +163,12 @@ function initSpinGame() {
         if (confettiActiveUntil > now || confettiParts.length !== 0){ requestAnimationFrame(confettiLoop); } else { confettiRunning = false; cctx.clearRect(0, 0, window.innerWidth, window.innerHeight); }
     }
 
-    // Wheel Engine
+    // ==========================================
+    // 🎡 WHEEL ENGINE & LIVE FETCH
+    // ==========================================
     var SEGMENT_COUNT = (DNA.wheel && DNA.wheel.segments) ? Number(DNA.wheel.segments) : 8;
     var prizes = (DNA.prizes || []).slice(0, SEGMENT_COUNT);
 
-    // ==========================================
-    // ⚡ LIVE PRIZE FETCHING
-    // ==========================================
     async function loadLivePrizes() {
         try {
             var webAppUrl = "https://script.google.com/macros/s/AKfycbzQA-9G3XPnAjdeik1AM5S5TI8_0MzZdAxMmv3goqfvub2a9opd6HLK6t1o3e6hqLe7/exec";
@@ -126,8 +188,7 @@ function initSpinGame() {
             console.log("Could not load live prizes, using fallback DNA.", error);
         }
     }
-    loadLivePrizes(); // Fire fetch command immediately
-    // ==========================================
+    loadLivePrizes(); 
 
     var wheelCanvas = q("#wheel");
     var wctx = wheelCanvas ? wheelCanvas.getContext("2d") : null;
@@ -150,6 +211,7 @@ function initSpinGame() {
         wctx.lineWidth = radius * 0.08; wctx.strokeStyle = mix(getCss("--accent2"), getCss("--accent"), 0.35);
         wctx.beginPath(); wctx.arc(cx, cy, radius, 0, Math.PI * 2); wctx.stroke();
         var baseA = mix(getCss("--primary"), getCss("--accent"), 0.18); var baseB = mix("#ffffff", getCss("--accent2"), 0.74);
+        
         for(var i=0; i !== prizes.length; i++){
             var start = rotation + i * seg; var end = start + seg;
             wctx.beginPath(); wctx.moveTo(cx, cy); wctx.arc(cx, cy, radius * 0.92, start, end); wctx.closePath();
@@ -176,7 +238,20 @@ function initSpinGame() {
 
     function spin(){
         if (spinning) return;
-        spinning = true; var spinBtn = q("#spinBtn"); if(spinBtn) spinBtn.disabled = true; lastTickIndex = -1;
+
+        // 🔒 LOCK CHECK
+        if (isLocked()){
+            openModal({
+                amount: "ALREADY CLAIMED",
+                description: "This device has already unlocked a bonus.",
+                code: "LOCKED",
+                isLockMessage: true
+            });
+            return;
+        }
+
+        spinning = true; 
+        var spinBtn = q("#spinBtn"); if(spinBtn) spinBtn.disabled = true; lastTickIndex = -1;
         var winnerIndex = pickIndexWeighted(); var seg = (Math.PI * 2) / prizes.length; var targetMod = pointerAngle - ((winnerIndex + 0.5) * seg);
         var fullTurns = (DNA.wheel && DNA.wheel.spinRotations ? Number(DNA.wheel.spinRotations) : 6) + Math.floor(Math.random() * 2);
         var duration = Math.max(3200, (DNA.wheel && DNA.wheel.spinDuration ? Number(DNA.wheel.spinDuration) : 5.5) * 1000);
@@ -205,6 +280,10 @@ function initSpinGame() {
             }
             if (t < 1){ requestAnimationFrame(frame); return; }
             rotation = ((baseEnd % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
+            
+            // 🔒 SET THE LOCK AFTER SPIN FINISHES
+            setLocked();
+            
             spinning = false; if(spinBtn) spinBtn.disabled = false;
         }
         requestAnimationFrame(frame);
@@ -213,28 +292,67 @@ function initSpinGame() {
     if(q("#spinBtn")) q("#spinBtn").addEventListener("click", spin);
     if(q(".wheelShell")) q(".wheelShell").addEventListener("click", spin);
 
+    // ==========================================
+    // 🏆 UI MODALS & COPY BUTTON
+    // ==========================================
     var modal = q("#modal");
+    
     function openModal(prize){
+        var isLockMessage = !!prize.isLockMessage;
+        
+        if(q("#modalBadge")) q("#modalBadge").textContent = isLockMessage ? "Booking Required" : "Bonus Unlocked";
         if(q("#winAmount")) q("#winAmount").textContent = prize.amount || "PRIZE"; 
         if(q("#winDesc")) q("#winDesc").textContent = prize.description || ""; 
         if(q("#winCode")) q("#winCode").textContent = prize.code || "CODE";
+        
         if(q("#claimLine")) {
             var claimTpl = (DNA.callToAction && DNA.callToAction.claimLine) ? DNA.callToAction.claimLine : "Mention code {CODE} when booking!";
             q("#claimLine").textContent = claimTpl.replace("{CODE}", prize.code || "CODE");
         }
-        if(DNA.confetti && DNA.confetti.burstOnWin) { confettiBurst(prize.bigWin ? Number(DNA.confetti.bigWinMultiplier || 3) : 1); }
+        
+        // Hide Call Link if it's a lock message
+        if(q("#callLink")) q("#callLink").style.display = isLockMessage ? "none" : "";
+        
+        // Permanently hide the Spin Again Button
+        if(q("#spinAgainBtn")) q("#spinAgainBtn").style.display = "none";
+        
+        // Force the screenshot reminder to show
+        if(q("#screenshotNote") && !isLockMessage) q("#screenshotNote").style.display = "block";
+
+        if(DNA.confetti && DNA.confetti.burstOnWin && !isLockMessage) { confettiBurst(prize.bigWin ? Number(DNA.confetti.bigWinMultiplier || 3) : 1); }
         if(modal) modal.classList.add("show");
     }
     
     if(q("#closeModal")) q("#closeModal").addEventListener("click", function(){ if(modal) modal.classList.remove("show"); });
     if(modal) modal.addEventListener("click", function(e) { if (e.target === modal) modal.classList.remove("show"); });
+    
+    // Wire up the engine handoff
     window.addEventListener('machinoLeadCaptured', function() { 
         var engineOverlay = q('.machino-overlay');
         if (engineOverlay) engineOverlay.style.display = 'none';
         openModal(window.winningPrize); 
     });
 
-    // THEME & INFO MODAL LOGIC
+    // Wire up the Copy button
+    if(q("#copyBtn")) {
+        q("#copyBtn").addEventListener("click", async function() {
+            var code = q("#winCode") ? q("#winCode").textContent.trim() : "";
+            try {
+                await navigator.clipboard.writeText(code);
+                q("#copyBtn").textContent = "COPIED";
+                setTimeout(function() { q("#copyBtn").textContent = "COPY"; }, 900);
+            } catch(e) {
+                var ta = document.createElement("textarea");
+                ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+                q("#copyBtn").textContent = "COPIED";
+                setTimeout(function() { q("#copyBtn").textContent = "COPY"; }, 900);
+            }
+        });
+    }
+
+    // ==========================================
+    // 🌙 THEME & INFO MODAL LOGIC
+    // ==========================================
     const themeBtn = q('#themeToggleBtn');
     if (themeBtn) {
         if (localStorage.getItem('spinTheme') === 'dark') {
