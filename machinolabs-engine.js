@@ -1,5 +1,5 @@
 /**
- * 🚀 MACHINOLABS UNIVERSAL LEAD ENGINE (PHANTOM SYNC EDITION) 🚀
+ * 🚀 MACHINOLABS UNIVERSAL LEAD ENGINE (FRANCHISE EDITION) 🚀
  * This script is 100% client agnostic. It dynamically accepts the niche
  * routing instructions directly from the game's DNA.
  */
@@ -89,7 +89,7 @@ const MachinoEngine = (function() {
     }
 
     // ==========================================
-    // 3. THE WEBHOOK LOGIC
+    // 3. THE WEBHOOK LOGIC (FRANCHISE SCALED)
     // ==========================================
     async function handleFormSubmit(e) {
         e.preventDefault();
@@ -105,8 +105,11 @@ const MachinoEngine = (function() {
             source: currentSource, score: currentScore, niche: currentNiche, prize: currentPrize
         };
 
+        // Determine which Google Sheet to send the lead to
+        const activeWebhookUrl = (window.APP_DNA && window.APP_DNA.webAppUrl) ? window.APP_DNA.webAppUrl : CONFIG.webhookUrl;
+
         try {
-            await fetch(CONFIG.webhookUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+            await fetch(activeWebhookUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
             statusText.innerText = "Success! Redirecting...";
             setTimeout(() => {
                 document.getElementById('machino-overlay').classList.remove('show');
@@ -122,38 +125,7 @@ const MachinoEngine = (function() {
     window.addEventListener('DOMContentLoaded', injectUI);
 
     // ==========================================
-    // 4. PHANTOM SYNC 2.0 (The Ghost Updater)
-    // ==========================================
-    const LOCAL_VERSION = "v1"; // Matches your version.txt
-    
-    async function checkPhantomSync() {
-        try {
-            // Append a timestamp to the URL so the browser doesn't pull a cached version.txt
-            const response = await fetch("https://oasis-master-engine.pages.dev/version.txt?t=" + Date.now());
-            const liveVersion = (await response.text()).trim();
-            
-            if (liveVersion && liveVersion !== LOCAL_VERSION) {
-                console.log("⚡ Phantom Sync: New version detected (" + liveVersion + "). Waiting in shadows...");
-                
-                if (document.visibilityState === 'hidden') {
-                    window.location.reload(true);
-                } else {
-                    document.addEventListener('visibilitychange', function() {
-                        if (document.visibilityState === 'hidden') {
-                            console.log("⚡ Phantom Sync: Target lost focus. Executing reload.");
-                            window.location.reload(true);
-                        }
-                    });
-                }
-            }
-        } catch (e) { /* Fail silently if offline */ }
-    }
-    
-    // Check for updates 2.5 seconds after load so it doesn't slow down the wheel graphic
-    setTimeout(checkPhantomSync, 2500);
-
-    // ==========================================
-    // 5. THE PUBLIC API
+    // 4. THE PUBLIC API
     // ==========================================
     return {
         triggerLuckGame: function(gameName, prizeWon, clientNiche) {
