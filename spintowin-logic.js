@@ -1,6 +1,9 @@
 function initSpinGame() {
     if (!window.APP_DNA) return console.error("No DNA Found");
     var DNA = window.APP_DNA;
+    // 🛡️ EMERGENCY SWITCH STATE FLAG
+    window.usingOfflineFallback = false; 
+    
     var q = function(sel) { return document.querySelector(sel); };
 
     function normalizeTel(value){ var raw = String(value || "").trim(); if (!raw) return "#"; if (raw.indexOf("tel:") === 0) return raw; var digits = raw.replace(/[^\d+]/g, ""); return "tel:" + digits; }
@@ -53,7 +56,6 @@ function initSpinGame() {
         if(q("#footerLine1")) q("#footerLine1").textContent = loc.footerLine1 || "";
         if(q("#footerLine2")) q("#footerLine2").textContent = loc.footerLine2 || "";
 
-        // Safely wire up the Call Now button with a fallback phone number
         var defaultPhone = "7176232907";
         var telNum = (DNA.callToAction && (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay)) ? (DNA.callToAction.phoneTel || DNA.callToAction.phoneDisplay) : defaultPhone;
         
@@ -102,7 +104,6 @@ function initSpinGame() {
         try{ localStorage.removeItem(STORAGE_KEY); } catch(e){}
     }
 
-    // Bind secret Admin Reset to the "Tap the wheel to reveal..." text
     if(q("#helperLine")) {
         q("#helperLine").addEventListener("dblclick", function() {
             clearLocked();
@@ -110,7 +111,6 @@ function initSpinGame() {
         });
     }
 
-    // Fallback if the hidden reset button is used
     if(q("#resetBtn")) {
         q("#resetBtn").addEventListener("click", function() {
             clearLocked();
@@ -164,14 +164,21 @@ function initSpinGame() {
     }
 
     // ==========================================
-    // 🎡 WHEEL ENGINE & LIVE FETCH
+    // 🎡 WHEEL ENGINE & LIVE FETCH (FRANCHISE SCALED)
     // ==========================================
     var SEGMENT_COUNT = (DNA.wheel && DNA.wheel.segments) ? Number(DNA.wheel.segments) : 8;
     var prizes = (DNA.prizes || []).slice(0, SEGMENT_COUNT);
 
     async function loadLivePrizes() {
         try {
-            var webAppUrl = "https://script.google.com/macros/s/AKfycbzQA-9G3XPnAjdeik1AM5S5TI8_0MzZdAxMmv3goqfvub2a9opd6HLK6t1o3e6hqLe7/exec";
+            // 🌐 PULL FRANCHISE URL DYNAMICALLY FROM DNA!
+            var webAppUrl = DNA.webAppUrl;
+            if (!webAppUrl) {
+                console.log("No Web App URL in DNA. Using offline fallback.");
+                window.usingOfflineFallback = true;
+                return;
+            }
+            
             var response = await fetch(webAppUrl + "?niche=" + DNA.niche);
             var data = await response.json();
             
@@ -186,6 +193,8 @@ function initSpinGame() {
             }
         } catch (error) {
             console.log("Could not load live prizes, using fallback DNA.", error);
+            // 🚨 FLIP THE EMERGENCY SWITCH
+            window.usingOfflineFallback = true; 
         }
     }
     loadLivePrizes(); 
@@ -234,7 +243,30 @@ function initSpinGame() {
 
     function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
     function easeOutBack(t){ var c1 = 1.70158; return 1 + (c1 + 1) * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
-    function pickIndexWeighted(){ var total = prizes.reduce(function(a,b){return a + Math.max(0.1, Number(b.weight||1));},0); var r = Math.random() * total; for(var i=0; i<prizes.length; i++){ r -= Math.max(0.1, Number(prizes[i].weight||1)); if(r<=0) return i; } return prizes.length-1; }
+    
+    function pickIndexWeighted(){ 
+        // 🚨 FAIL-SAFE OVERRIDE (RANDOMIZED) 🚨
+        if (window.usingOfflineFallback) {
+            var safeIndexes = [];
+            for (var j = 0; j < prizes.length; j++) {
+                if (prizes[j].isFallbackWinner === true) {
+                    safeIndexes.push(j);
+                }
+            }
+            if (safeIndexes.length === 0) return 0; // Default if marketer forgot flag
+            var randomChoice = Math.floor(Math.random() * safeIndexes.length);
+            return safeIndexes[randomChoice];
+        }
+
+        // 🎲 Normal Random Weighted Spin (Online Mode)
+        var total = prizes.reduce(function(a,b){return a + Math.max(0.1, Number(b.weight||1));},0); 
+        var r = Math.random() * total; 
+        for(var i=0; i<prizes.length; i++){ 
+            r -= Math.max(0.1, Number(prizes[i].weight||1)); 
+            if(r<=0) return i; 
+        } 
+        return prizes.length-1; 
+    }
 
     function spin(){
         if (spinning) return;
